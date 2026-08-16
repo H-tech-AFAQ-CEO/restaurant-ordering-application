@@ -6,6 +6,9 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  async rewrites() {
+    return [{ source: '/:path*', destination: '/' }]
+  },
 }
 
 export default nextConfig
