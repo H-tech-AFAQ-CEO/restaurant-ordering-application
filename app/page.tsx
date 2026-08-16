@@ -1,47 +1,78 @@
+'use client'
+
+import { useMemo, useState } from 'react'
+import {
+  BarChart3, Bell, BookOpen, Check, ChevronDown, ChevronRight, Clock3,
+  CreditCard, Filter, Flame, Grid2X2, LayoutDashboard, Menu as MenuIcon,
+  MoreHorizontal, Package, Pencil, Plus, Search, Settings, ShoppingBag,
+  Star, Store, Trash2, UserRound, Users, Utensils, X, ArrowUpRight,
+} from 'lucide-react'
+
+type Role = 'customer' | 'kitchen' | 'admin'
+type MenuItem = { id: number; name: string; description: string; price: number; category: string; image: string; tags: string[]; popular?: boolean }
+type BasketItem = MenuItem & { quantity: number; note?: string }
+type KitchenOrder = { id: string; guest: string; type: string; time: string; status: 'New' | 'Preparing' | 'Ready' | 'Completed'; priority?: boolean; items: string[] }
+
+const categories = ['All dishes', 'Small plates', 'Mains', 'From the grill', 'Desserts', 'Drinks']
+const menu: MenuItem[] = [
+  { id: 1, name: 'Heirloom tomato', description: 'Aged balsamic, basil oil, whipped ricotta', price: 14, category: 'Small plates', image: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=900&q=85', tags: ['V', 'GF'], popular: true },
+  { id: 2, name: 'Hokkaido scallops', description: 'Cauliflower silk, brown butter, sea herbs', price: 19, category: 'Small plates', image: 'https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=900&q=85', tags: ['GF'] },
+  { id: 3, name: 'Wild mushroom risotto', description: 'Porcini, parmesan, truffle oil, chive', price: 24, category: 'Mains', image: 'https://images.unsplash.com/photo-1476124369491-e7addf5db371?auto=format&fit=crop&w=900&q=85', tags: ['V', 'GF'], popular: true },
+  { id: 4, name: 'Miso black cod', description: 'Jasmine rice, bok choy, ginger dashi', price: 31, category: 'Mains', image: 'https://images.unsplash.com/photo-1515003197210-e0cd71810b5f?auto=format&fit=crop&w=900&q=85', tags: ['GF'] },
+  { id: 5, name: 'Charred bavette', description: 'Café de Paris, hand-cut chips, watercress', price: 34, category: 'From the grill', image: 'https://images.unsplash.com/photo-1546964124-0cce460f38ef?auto=format&fit=crop&w=900&q=85', tags: [] },
+  { id: 6, name: 'Olive oil cake', description: 'Citrus curd, crème fraîche, pistachio', price: 12, category: 'Desserts', image: 'https://images.unsplash.com/photo-1551024506-0bccd828d307?auto=format&fit=crop&w=900&q=85', tags: ['V'] },
+]
+const initialOrders: KitchenOrder[] = [
+  { id: '#1048', guest: 'Maya Chen', type: 'Collection · 4 guests', time: 'Just now', status: 'New', priority: true, items: ['2 × Miso black cod', '1 × Wild mushroom risotto', '1 × Heirloom tomato'] },
+  { id: '#1047', guest: 'Jon Bell', type: 'Table 07 · 2 guests', time: '8 min ago', status: 'Preparing', items: ['2 × Charred bavette', '1 × Hokkaido scallops'] },
+  { id: '#1046', guest: 'Priya Shah', type: 'Delivery · 3.2 km', time: '18 min ago', status: 'Ready', items: ['1 × Wild mushroom risotto', '2 × Olive oil cake'] },
+  { id: '#1045', guest: 'Daniel Reed', type: 'Table 03 · 4 guests', time: '32 min ago', status: 'Completed', items: ['4 × Heirloom tomato', '2 × Miso black cod'] },
+]
+
+function IconButton({ label, children, onClick }: { label: string; children: React.ReactNode; onClick?: () => void }) {
+  return <button aria-label={label} title={label} onClick={onClick} className="icon-button">{children}</button>
+}
+function Logo() { return <div className="brand"><span className="brand-mark">S</span><div><strong>Serein</strong><small>Kitchen & table</small></div></div> }
+function StatusPill({ children, tone = 'sage' }: { children: React.ReactNode; tone?: string }) { return <span className={`status-pill ${tone}`}>{children}</span> }
+
 export default function Page() {
-  return (
-    <main
-      style={{
-        colorScheme: 'light dark',
-        position: 'relative',
-        display: 'flex',
-        minHeight: '100vh',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: 'light-dark(#fff, #000)',
-        color: 'light-dark(#000, #fff)',
-      }}
-    >
-      <svg
-        aria-hidden="true"
-        style={{ width: 80, height: 80 }}
-        width={80}
-        height={80}
-        fill="none"
-        viewBox="0 0 20 20"
-        xmlns="http://www.w3.org/2000/svg"
-        stroke="currentColor"
-        strokeWidth="0.5"
-      >
-        <path
-          d="M14.2 14.2H17V6.9375C17 4.76288 15.2371 3 13.0625 3H5.8V5.8M14.2 14.2V7.79063L7.79062 14.2H14.2ZM14.2 14.2V17H6.9375C4.76288 17 3 15.2371 3 13.0625V5.8H5.8M5.8 5.8V12.2313L12.2313 5.8H5.8Z"
-          strokeLinejoin="round"
-        />
-      </svg>
-      <p
-        style={{
-          position: 'absolute',
-          left: '50%',
-          top: 'calc(50% + 56px)',
-          transform: 'translateX(-50%)',
-          whiteSpace: 'nowrap',
-          fontSize: '14px',
-          fontWeight: 500,
-          color: 'light-dark(#71717a, #a1a1aa)',
-        }}
-      >
-        Your v0 generation will show here.
-      </p>
-    </main>
-  )
+  const [role, setRole] = useState<Role>('customer')
+  const [category, setCategory] = useState('All dishes')
+  const [query, setQuery] = useState('')
+  const [basket, setBasket] = useState<BasketItem[]>([{ ...menu[2], quantity: 1 }])
+  const [selected, setSelected] = useState<MenuItem | null>(null)
+  const [showBasket, setShowBasket] = useState(false)
+  const [toast, setToast] = useState('')
+  const [orders, setOrders] = useState(initialOrders)
+  const [available, setAvailable] = useState<Record<number, boolean>>({ 1: true, 2: true, 3: true, 4: true, 5: false, 6: true })
+
+  const filtered = useMemo(() => menu.filter((item) => (category === 'All dishes' || item.category === category) && `${item.name} ${item.description}`.toLowerCase().includes(query.toLowerCase())), [category, query])
+  const basketCount = basket.reduce((sum, item) => sum + item.quantity, 0)
+  const subtotal = basket.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  const notify = (message: string) => { setToast(message); window.setTimeout(() => setToast(''), 2400) }
+  const addToBasket = (item: MenuItem) => { setBasket((items) => { const found = items.find((i) => i.id === item.id); return found ? items.map((i) => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i) : [...items, { ...item, quantity: 1 }] }); setSelected(null); notify(`${item.name} added to your table`) }
+  const changeQty = (id: number, delta: number) => setBasket((items) => items.flatMap((item) => item.id === id ? (item.quantity + delta > 0 ? [{ ...item, quantity: item.quantity + delta }] : []) : [item]))
+  const advanceOrder = (id: string) => setOrders((items) => items.map((order) => { if (order.id !== id) return order; const statuses: KitchenOrder['status'][] = ['New', 'Preparing', 'Ready', 'Completed']; return { ...order, status: statuses[Math.min(statuses.indexOf(order.status) + 1, 3)] } }))
+
+  return <div className="app-shell">
+    <header className="topbar"><Logo /><nav className="role-switcher" aria-label="Demo surface"><button className={role === 'customer' ? 'active' : ''} onClick={() => setRole('customer')}><Utensils size={15} /> Order online</button><button className={role === 'kitchen' ? 'active' : ''} onClick={() => setRole('kitchen')}><Flame size={15} /> Kitchen</button><button className={role === 'admin' ? 'active' : ''} onClick={() => setRole('admin')}><LayoutDashboard size={15} /> Admin</button></nav><div className="top-actions"><IconButton label="Notifications"><Bell size={17} /></IconButton><IconButton label="Account"><UserRound size={17} /></IconButton>{role === 'customer' && <button className="basket-trigger" onClick={() => setShowBasket(true)}><ShoppingBag size={16} /><span>{basketCount}</span><b>£{subtotal.toFixed(2)}</b></button>}</div></header>
+    {role === 'customer' && <main className="customer-page"><section className="customer-intro"><div><p className="eyebrow">Open today · 12:00 — 22:30</p><h1>Food with a<br /><em>gentler pace.</em></h1><p className="intro-copy">Seasonal cooking, considered simply. Join us at the table or order ahead for collection.</p><div className="intro-actions"><button className="button primary" onClick={() => document.getElementById('menu')?.scrollIntoView({ behavior: 'smooth' })}>Explore the menu <ChevronRight size={15} /></button><button className="text-button">Our story <ArrowUpRight size={14} /></button></div></div><div className="intro-image"><img src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=1200&q=85" alt="Elegant restaurant table set for dinner" /><div className="image-caption"><span>Tonight at Serein</span><strong>New season, shared slowly</strong></div></div></section><section className="menu-section" id="menu"><div className="section-heading"><div><p className="eyebrow">The menu</p><h2>Made for lingering.</h2></div><div className="search-field"><Search size={15} /><input aria-label="Search menu" placeholder="Search dishes" value={query} onChange={(e) => setQuery(e.target.value)} />{query && <IconButton label="Clear search" onClick={() => setQuery('')}><X size={14} /></IconButton>}</div></div><div className="category-row">{categories.map((item) => <button key={item} className={category === item ? 'selected' : ''} onClick={() => setCategory(item)}>{item}</button>)}</div><div className="menu-grid">{filtered.map((item) => <article className="menu-card" key={item.id}><div className="dish-image"><img src={item.image} alt={item.name} />{item.popular && <span className="image-tag">Guest favourite</span>}<button className="quick-add" aria-label={`Add ${item.name}`} onClick={() => setSelected(item)}><Plus size={17} /></button></div><div className="dish-info"><div className="dish-title"><h3>{item.name}</h3><strong>£{item.price}</strong></div><p>{item.description}</p><div className="dish-meta">{item.tags.map((tag) => <span key={tag}>{tag}</span>)}<small>{item.category}</small></div></div></article>)}</div>{filtered.length === 0 && <div className="empty-state"><Search size={22} /><p>No dishes found. Try another search.</p></div>}</section><section className="promise-strip"><div><span className="promise-icon"><BookOpen size={17} /></span><strong>Thoughtful ingredients</strong><p>We work with small farms and makers we trust.</p></div><div><span className="promise-icon"><Clock3 size={17} /></span><strong>Ready when you are</strong><p>Book a table or collect from our kitchen.</p></div><div><span className="promise-icon"><Star size={17} /></span><strong>Made to remember</strong><p>Unfussy food, warm service, good company.</p></div></section></main>}
+    {role === 'kitchen' && <Kitchen orders={orders} onAdvance={advanceOrder} />}
+    {role === 'admin' && <Admin available={available} setAvailable={setAvailable} orders={orders} notify={notify} />}
+    <footer className="mobile-nav"><button className={role === 'customer' ? 'active' : ''} onClick={() => setRole('customer')}><Store size={18} />Order</button><button onClick={() => setShowBasket(true)}><ShoppingBag size={18} />Basket<span>{basketCount}</span></button><button><UserRound size={18} />Account</button></footer>
+    {showBasket && <div className="overlay" onClick={() => setShowBasket(false)}><aside className="basket-panel" onClick={(e) => e.stopPropagation()}><div className="panel-head"><div><p className="eyebrow">Your order</p><h2>At the table</h2></div><IconButton label="Close basket" onClick={() => setShowBasket(false)}><X size={18} /></IconButton></div><div className="order-mode"><button className="active"><Store size={15} />Collection <small>20–30 min</small></button><button><Package size={15} />Delivery <small>45–55 min</small></button></div><div className="basket-items">{basket.map((item) => <div className="basket-item" key={item.id}><img src={item.image} alt="" /><div><strong>{item.name}</strong><small>£{item.price} · {item.tags.join(', ')}</small><div className="quantity"><button onClick={() => changeQty(item.id, -1)}>-</button><span>{item.quantity}</span><button onClick={() => changeQty(item.id, 1)}>+</button></div></div><b>£{(item.price * item.quantity).toFixed(2)}</b></div>)}{basket.length === 0 && <p className="muted">Your basket is waiting for something lovely.</p>}</div><div className="basket-summary"><div><span>Subtotal</span><b>£{subtotal.toFixed(2)}</b></div><div><span>Service</span><b>£{(subtotal * .1).toFixed(2)}</b></div><div className="total"><span>Total</span><b>£{(subtotal * 1.1).toFixed(2)}</b></div><button className="button primary full" onClick={() => { setShowBasket(false); notify('Checkout is ready to connect to Stripe') }}>Continue to checkout <CreditCard size={15} /></button></div></aside></div>}
+    {selected && <div className="overlay" onClick={() => setSelected(null)}><div className="custom-modal" onClick={(e) => e.stopPropagation()}><img src={selected.image} alt={selected.name} /><div className="custom-content"><IconButton label="Close customization" onClick={() => setSelected(null)}><X size={17} /></IconButton><p className="eyebrow">Make it yours</p><h2>{selected.name}</h2><p>{selected.description}</p><label className="option"><span><b>Add sourdough</b><small>Whipped cultured butter</small></span><b>+ £3</b><input type="checkbox" /></label><label className="option"><span><b>Extra herbs</b><small>Garden herbs & lemon oil</small></span><b>+ £1</b><input type="checkbox" /></label><button className="button primary full" onClick={() => addToBasket(selected)}>Add to order · £{selected.price}</button></div></div></div>}
+    {toast && <div className="toast"><Check size={15} />{toast}</div>}
+  </div>
+}
+
+function Kitchen({ orders, onAdvance }: { orders: KitchenOrder[]; onAdvance: (id: string) => void }) {
+  const statuses: KitchenOrder['status'][] = ['New', 'Preparing', 'Ready', 'Completed']
+  return <main className="workspace"><div className="workspace-head"><div><p className="eyebrow">Thursday · 18 September 2025</p><h1>Good evening, Amara.</h1><p className="muted">The kitchen is in a steady rhythm. Here is your service at a glance.</p></div><button className="button outline"><Settings size={15} /> Service settings</button></div><div className="kpi-row"><div><span className="kpi-label">Active orders</span><strong>12</strong><small><ArrowUpRight size={13} /> 18% from yesterday</small></div><div><span className="kpi-label">Avg. prep time</span><strong>18 <i>min</i></strong><small className="neutral"><Clock3 size={13} /> On target</small></div><div><span className="kpi-label">Next collection</span><strong>6:45 <i>pm</i></strong><small className="neutral"><Users size={13} /> 4 guests</small></div><div className="alert-kpi"><span className="kpi-label">New orders</span><strong>3</strong><small>Needs attention</small></div></div><div className="board-head"><h2>Live kitchen board</h2><span><span className="live-dot" /> Updating live</span></div><div className="kitchen-board">{statuses.map((status) => <section className="board-column" key={status}><div className="column-title"><span>{status}</span><b>{orders.filter((order) => order.status === status).length}</b></div>{orders.filter((order) => order.status === status).map((order) => <article className={`kitchen-card ${order.priority ? 'priority' : ''}`} key={order.id}><div className="card-top"><strong>{order.id}</strong>{order.priority && <StatusPill tone="amber">Priority</StatusPill>}<MoreHorizontal size={16} /></div><h3>{order.guest}</h3><p>{order.type}</p><ul>{order.items.map((item) => <li key={item}>{item}</li>)}</ul><div className="card-bottom"><span><Clock3 size={13} /> {order.time}</span>{status !== 'Completed' && <button onClick={() => onAdvance(order.id)}>{status === 'New' ? 'Start' : status === 'Preparing' ? 'Ready' : 'Complete'} <ChevronRight size={13} /></button>}</div></article>)}</section>)}</div></main>
+}
+
+function Admin({ available, setAvailable, orders, notify }: { available: Record<number, boolean>; setAvailable: React.Dispatch<React.SetStateAction<Record<number, boolean>>>; orders: KitchenOrder[]; notify: (message: string) => void }) {
+  const [section, setSection] = useState('Overview')
+  const nav = [{ label: 'Overview', icon: LayoutDashboard }, { label: 'Menu & dishes', icon: MenuIcon }, { label: 'Orders', icon: ShoppingBag }, { label: 'Customers', icon: Users }, { label: 'Staff', icon: UserRound }, { label: 'Settings', icon: Settings }, { label: 'Audit log', icon: BookOpen }]
+  return <main className="admin-layout"><aside className="admin-sidebar"><div className="admin-logo"><Logo /></div><p className="eyebrow">Workspace</p>{nav.map(({ label, icon: NavIcon }) => <button key={label} className={section === label ? 'active' : ''} onClick={() => setSection(label)}><NavIcon size={16} />{label}{label === 'Orders' && <span>12</span>}</button>)}<div className="sidebar-foot"><div className="user-chip"><span>AM</span><div><strong>Amara Moss</strong><small>Administrator</small></div><ChevronDown size={14} /></div></div></aside><section className="admin-content"><div className="admin-top"><div className="mobile-admin-title"><Logo /></div><div className="admin-search"><Search size={15} /><input placeholder="Search anything" /></div><div className="admin-actions"><span className="live-dot" /> Live system <IconButton label="Notifications"><Bell size={16} /></IconButton></div></div>{section === 'Overview' && <><div className="admin-heading"><div><p className="eyebrow">Thursday, 18 September 2025</p><h1>Good evening, Amara.</h1></div><button className="button outline"><ArrowUpRight size={15} /> Export report</button></div><div className="admin-kpis"><div><span>Total revenue <ArrowUpRight size={13} /></span><strong>£8,492.40</strong><small>+12.8% vs last week</small></div><div><span>Orders <ArrowUpRight size={13} /></span><strong>184</strong><small>+8.4% vs last week</small></div><div><span>Average order</span><strong>£46.15</strong><small>+3.1% vs last week</small></div><div><span>Guest rating <Star size={13} /></span><strong>4.86</strong><small>From 92 reviews</small></div></div><div className="dashboard-grid"><div className="panel revenue-panel"><div className="panel-head"><div><p className="eyebrow">Performance</p><h2>Revenue overview</h2></div><button className="select-button">Last 7 days <ChevronDown size={14} /></button></div><div className="chart"><div className="chart-y"><span>£2k</span><span>£1.5k</span><span>£1k</span><span>£500</span><span>£0</span></div><div className="chart-bars">{[62, 48, 72, 55, 83, 68, 92].map((height, i) => <div key={i} className="bar-wrap"><div className="bar" style={{ height: `${height}%` }}><span>£{(height * 22).toLocaleString()}</span></div><small>{['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i]}</small></div>)}</div></div></div><div className="panel activity-panel"><div className="panel-head"><div><p className="eyebrow">Live feed</p><h2>Recent activity</h2></div><button className="text-button">View all <ChevronRight size={14} /></button></div>{['Menu item updated', 'New staff member added', 'Order #1048 received', 'Price changed'].map((item, i) => <div className="activity-row" key={item}><span className="activity-icon"><Pencil size={13} /></span><div><strong>{item}</strong><small>{['Wild mushroom risotto · Amara', 'Luca Ferri · Amara', 'Maya Chen · Online', 'Charred bavette · Amara'][i]}</small></div><time>{['4m', '28m', '32m', '1h'][i]}</time></div>)}</div></div><div className="panel orders-panel"><div className="panel-head"><div><p className="eyebrow">Today</p><h2>Recent orders</h2></div><button className="text-button" onClick={() => setSection('Orders')}>See all <ChevronRight size={14} /></button></div><div className="orders-table"><div className="table-header"><span>Order</span><span>Guest</span><span>Type</span><span>Total</span><span>Status</span></div>{orders.slice(0, 4).map((order, i) => <div className="table-row" key={order.id}><strong>{order.id}</strong><span>{order.guest}</span><span>{order.type.split(' · ')[0]}</span><b>£{[86, 112, 58, 146][i]}.00</b><StatusPill tone={order.status === 'Completed' ? 'sage' : order.status === 'Ready' ? 'blue' : 'amber'}>{order.status}</StatusPill></div>)}</div></div></>}{section === 'Menu & dishes' && <div className="admin-list-page"><div className="admin-heading"><div><p className="eyebrow">Catalogue</p><h1>Menu & dishes</h1></div><button className="button primary" onClick={() => notify('New dish form is ready to connect')}><Plus size={15} /> Add dish</button></div><div className="panel menu-management"><div className="management-toolbar"><div className="filter-select"><Filter size={14} /> All categories <ChevronDown size={14} /></div><span className="muted">{menu.length} dishes</span></div>{menu.map((item) => <div className="management-row" key={item.id}><img src={item.image} alt="" /><div><strong>{item.name}</strong><small>{item.category} · {item.description}</small></div><b>£{item.price}</b><button className={`toggle ${available[item.id] ? 'on' : ''}`} aria-label={`Toggle ${item.name} availability`} onClick={() => { setAvailable((a) => ({ ...a, [item.id]: !a[item.id] })); notify(`${item.name} availability updated`) }}><span /></button><IconButton label={`Edit ${item.name}`}><Pencil size={15} /></IconButton><IconButton label={`Delete ${item.name}`}><Trash2 size={15} /></IconButton></div>)}</div></div>}{section !== 'Overview' && section !== 'Menu & dishes' && <div className="coming-soon"><span><BarChart3 size={22} /></span><p className="eyebrow">{section}</p><h1>A clear view of your {section.toLowerCase()}.</h1><p className="muted">This workspace is ready for your live data, permissions, and workflows.</p><button className="button outline" onClick={() => notify(`${section} workspace selected`)}>Explore workspace <ChevronRight size={15} /></button></div>}</section></main>
 }
